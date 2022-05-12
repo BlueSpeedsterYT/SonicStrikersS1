@@ -49,7 +49,7 @@ plcm:	macro gfx,vram
 ; Pattern load cues - standard block 1
 ; ---------------------------------------------------------------------------
 PLC_Main:	dc.w ((PLC_Mainend-PLC_Main-2)/6)-1
-		plcm	Nem_Lamp, $F400		; lamppost
+		plcm	Nem_Lamp, $D800		; lamppost
 		plcm	Nem_Hud, $D940		; HUD
 		plcm	Nem_Lives, $FA80	; lives	counter
 		plcm	Nem_Ring, $F640 	; rings
@@ -114,7 +114,8 @@ PLC_LZ:		dc.w ((PLC_LZ2-PLC_LZ-2)/6)-1
 		plcm	Nem_Bubbles, $6900	; bubbles and numbers
 		plcm	Nem_LzBlock3, $7780	; block
 		plcm	Nem_LzDoor1, $7880	; vertical door
-		plcm	Nem_Harpoon, $7980	; harpoon
+		;plcm	Nem_Harpoon, $7980	; harpoon	
+		plcm	Nem_LzSwitch, $A1E0	; switch
 		plcm	Nem_Burrobot, $94C0	; burrobot enemy
 
 PLC_LZ2:	dc.w ((PLC_LZ2end-PLC_LZ2-2)/6)-1
@@ -129,7 +130,8 @@ PLC_LZ2:	dc.w ((PLC_LZ2end-PLC_LZ2-2)/6)-1
 		plcm	Nem_LzPlatfm, $89E0	; rising platform
 		plcm	Nem_Orbinaut, $8CE0	; orbinaut enemy
 		plcm	Nem_Jaws, $90C0		; jaws enemy
-		plcm	Nem_LzSwitch, $A1E0	; switch
+		plcm	Nem_Harpoon, $7980	; harpoon	
+		;plcm	Nem_LzSwitch, $A1E0	; switch
 		plcm	Nem_Cork, $A000		; cork block
 		plcm	Nem_Spikes, $A360	; spikes
 		plcm	Nem_HSpring, $A460	; horizontal spring
@@ -193,7 +195,7 @@ PLC_SYZ2:	dc.w ((PLC_SYZ2end-PLC_SYZ2-2)/6)-1
 		plcm	Nem_Bumper, $7000	; bumper
 		plcm	Nem_SyzSpike1, $72C0	; large	spikeball
 		plcm	Nem_SyzSpike2, $7740	; small	spikeball
-		plcm	Nem_Cater, $9FE0	; caterkiller enemy
+		;plcm	Nem_Cater, $9FE0	; caterkiller enemy	;Mercury Roller Art Fix
 		plcm	Nem_LzSwitch, $A1E0	; switch
 		plcm	Nem_Spikes, $A360	; spikes
 		plcm	Nem_HSpring, $A460	; horizontal spring

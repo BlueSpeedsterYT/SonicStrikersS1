@@ -1,7 +1,7 @@
 ; ---------------------------------------------------------------------------
 ; Sprite mappings - monitors
 ; ---------------------------------------------------------------------------
-Map_Monitor_internal:
+Map_Monitor_internal:	
 		dc.w @static0-Map_Monitor_internal
 		dc.w @static1-Map_Monitor_internal
 		dc.w @static2-Map_Monitor_internal
@@ -38,14 +38,14 @@ Map_Monitor_internal:
 		dc.b $F5, 5, 0,	$2C, $F8
 		dc.b $EF, $F, 0, 0, $F0
 @rings:		dc.b 2			; 10 rings monitor
-		dc.b $F5, 5, 0,	$30, $F8
-		dc.b $EF, $F, 0, 0, $F0
-@s:		dc.b 2			; 'S' monitor
-		dc.b $F5, 5, 0,	$34, $F8
-		dc.b $EF, $F, 0, 0, $F0
-@goggles:	dc.b 2			; goggles monitor
 		dc.b $F5, 5, 0,	$20, $F8
 		dc.b $EF, $F, 0, 0, $F0
+@s:		dc.b 2			; 'S' monitor
+		dc.b $F5, 5, 0,	$3C, $F8
+		dc.b $EF, $F, 0, 0, $F0
+@goggles:	dc.b 2			; goggles monitor
+		dc.b $F5, 5, 0,	$38, $F8
+		dc.b $EF, $F, 0, 0, $F0
 @broken:	dc.b 1			; broken monitor
-		dc.b $FF, $D, 0, $38, $F0
+		dc.b $FF, $D, 0, $30, $F0
 		even

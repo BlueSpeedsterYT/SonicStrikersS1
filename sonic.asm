@@ -81,16 +81,16 @@ Vectors:	dc.l v_systemstack&$FFFFFF	; Initial stack pointer value
 		dc.l ErrorTrap			; Unused (reserved)
 		dc.l ErrorTrap			; Unused (reserved)
 		dc.l ErrorTrap			; Unused (reserved)
-	if Revision<>2
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-		dc.l ErrorTrap			; Unused (reserved)
-	else
+	;if Revision<>2
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;	dc.l ErrorTrap			; Unused (reserved)
+	;else
 loc_E0:
 		; Relocated code from Spik_Hurt. REVXB was a nasty hex-edit.
 		move.l	obY(a0),d3
@@ -103,11 +103,11 @@ loc_E0:
 		dc.l ErrorTrap
 		dc.l ErrorTrap
 		dc.l ErrorTrap
-	endc
+	;endc
 		dc.b "SEGA MEGA DRIVE " ; Hardware system ID (Console name)
 		dc.b "(C)SEGA 1991.APR" ; Copyright holder and release date (generally year)
-		dc.b "SONIC THE               HEDGEHOG                " ; Domestic name
-		dc.b "SONIC THE               HEDGEHOG                " ; International name
+		dc.b "SONIC STRIKERS: MECHA MADNESS                   " ; Domestic name
+		dc.b "SONIC STRIKERS                                  " ; International name
 		if Revision=0
 		dc.b "GM 00001009-00"   ; Serial/version number (Rev 0)
 		else
@@ -2158,6 +2158,10 @@ GM_Title:
 		move.w	(a5)+,(a6)
 		dbf	d1,Tit_LoadText	; load level select font
 
+	;Mercury Game Over When Drowning Fix
+		move.b	#0,(f_nobgscroll).w
+	;end Game Over When Drowning Fix
+
 		move.b	#0,(v_lastlamp).w ; clear lamppost counter
 		move.w	#0,(v_debuguse).w ; disable debug item placement mode
 		move.w	#0,(f_demo).w	; disable debug mode
@@ -2166,13 +2170,8 @@ GM_Title:
 		move.w	#0,(v_pcyc_time).w ; disable palette cycling
 		bsr.w	LevelSizeLoad
 		bsr.w	DeformLayers
-		lea	(v_16x16).w,a1
-		lea	(Blk16_GHZ).l,a0 ; load	GHZ 16x16 mappings
-		move.w	#0,d0
-		bsr.w	EniDec
-		lea	(Blk256_GHZ).l,a0 ; load GHZ 256x256 mappings
-		lea	(v_256x256).l,a1
-		bsr.w	KosDec
+		move.l	#Blk16_GHZ,(v_256x256+4).l	; store the ROM address for the block mappings
+		move.l	#Blk256_GHZ,(v_256x256).l	; store the ROM address for the chunk mappings
 		bsr.w	LevelLayoutLoad
 		bsr.w	PaletteFadeOut
 		disable_ints
@@ -2183,12 +2182,8 @@ GM_Title:
 		lea	(v_lvllayout+$40).w,a4
 		move.w	#$6000,d2
 		bsr.w	DrawChunks
-		lea	($FF0000).l,a1
-		lea	(Eni_Title).l,a0 ; load	title screen mappings
-		move.w	#0,d0
-		bsr.w	EniDec
-
-		copyTilemap	$FF0000,$C206,$21,$15
+		
+		copyTilemap	Eni_Title,$C206,$21,$15
 
 		locVRAM	0
 		lea	(Nem_GHZ_1st).l,a0 ; load GHZ patterns
@@ -2201,9 +2196,9 @@ GM_Title:
 		move.w	#$178,(v_demolength).w ; run title screen for $178 frames
 		lea	(v_objspace+$80).w,a1
 		moveq	#0,d0
-		move.w	#7,d1
+		move.w	#$F,d1	; ($40 / 4) - 1
 
-	Tit_ClrObj2:
+Tit_ClrObj2:
 		move.l	d0,(a1)+
 		dbf	d1,Tit_ClrObj2
 
@@ -2941,6 +2936,9 @@ Level_LoadObj:
 		bne.s	Level_SkipClr	; if yes, branch
 		move.w	d0,(v_rings).w	; clear rings
 		move.l	d0,(v_time).w	; clear time
+		
+		move.b	d0,(v_centstep).w
+		
 		move.b	d0,(v_lifecount).w ; clear lives counter
 
 	Level_SkipClr:
@@ -2955,7 +2953,7 @@ Level_LoadObj:
 		bsr.w	OscillateNumInit
 		move.b	#1,(f_scorecount).w ; update score counter
 		move.b	#1,(f_ringcount).w ; update rings counter
-		move.b	#1,(f_timecount).w ; update time counter
+		;move.b	#1,(f_timecount).w ; update time counter
 		move.w	#0,(v_btnpushtime1).w
 		lea	(DemoDataPtr).l,a1 ; load demo data
 		moveq	#0,d0
@@ -3020,6 +3018,7 @@ Level_ClrCardArt:
 		jsr	(AddPLC).l	; load animal gfx (level no. + $15)
 
 Level_StartGame:
+		move.b	#1,(f_timecount).w ; update time counter
 		bclr	#7,(v_gamemode).w ; subtract $80 from mode to end pre-level stuff
 
 ; ---------------------------------------------------------------------------
@@ -3821,6 +3820,9 @@ Cont_GotoLevel:
 		moveq	#0,d0
 		move.w	d0,(v_rings).w	; clear rings
 		move.l	d0,(v_time).w	; clear time
+		
+		move.b	d0,(v_centstep).w
+		
 		move.l	d0,(v_score).w	; clear score
 		move.b	d0,(v_lastlamp).w ; clear lamppost count
 		subq.b	#1,(v_continues).w ; subtract 1 from continues
@@ -5031,14 +5033,14 @@ DrawFlipXY:
 ; DrawBlocks:
 GetBlockData:
 		if Revision=0
-		lea	(v_16x16).w,a1
+		movea.l	(v_256x256+4).l,a1
 		add.w	4(a3),d4	; Add camera Y coordinate to relative coordinate
 		add.w	(a3),d5		; Add camera X coordinate to relative coordinate
 		else
 			add.w	(a3),d5
 	GetBlockData_2:
 			add.w	4(a3),d4
-			lea	(v_16x16).w,a1
+			movea.l	(v_256x256+4).l,a1
 		endc
 		; Turn Y coordinate into index into level layout
 		move.w	d4,d3
@@ -5051,7 +5053,7 @@ GetBlockData:
 		andi.w	#$7F,d0
 		; Get chunk from level layout
 		add.w	d3,d0
-		moveq	#-1,d3
+		moveq	#0,d3
 		move.b	(a4,d0.w),d3
 		beq.s	locret_6C1E	; If chunk 00, just return a pointer to the first block (expected to be empty)
 		; Turn chunk ID into index into chunk table
@@ -5066,6 +5068,7 @@ GetBlockData:
 		; Get block metadata from chunk
 		add.w	d4,d3
 		add.w	d5,d3
+		add.l	(v_256x256).l,d3
 		movea.l	d3,a0
 		move.w	(a0),d3
 		; Turn block ID into address
@@ -5274,13 +5277,9 @@ LevelDataLoad:
 		lea	(a2,d0.w),a2
 		move.l	a2,-(sp)
 		addq.l	#4,a2
-		movea.l	(a2)+,a0
-		lea	(v_16x16).w,a1	; RAM address for 16x16 mappings
-		move.w	#0,d0
-		bsr.w	EniDec
-		movea.l	(a2)+,a0
-		lea	(v_256x256).l,a1 ; RAM address for 256x256 mappings
-		bsr.w	KosDec
+		move.l	(a2)+,(v_256x256+4).l	; store the ROM address for the block mappings
+		andi.l	#$FFFFFF,(v_256x256+4).l
+		move.l	(a2)+,(v_256x256).l	; store the ROM address for the chunk mappings
 		bsr.w	LevelLayoutLoad
 		move.w	(a2)+,d0
 		move.w	(a2),d0
@@ -8427,7 +8426,7 @@ Map_SS_Down:	include	"_maps\SS DOWN Block.asm"
 		include	"_inc\AnimateLevelGfx.asm"
 
 		include	"_incObj\21 HUD.asm"
-Map_HUD:	include	"_maps\HUD.asm"
+Map_HUD:	include	"_maps\(Mercury) HUD (centiseconds).asm"
 
 ; ---------------------------------------------------------------------------
 ; Add points subroutine
@@ -8439,43 +8438,31 @@ Map_HUD:	include	"_maps\HUD.asm"
 AddPoints:
 		move.b	#1,(f_scorecount).w ; set score counter to update
 
-		if Revision=0
-		lea	(v_scorecopy).w,a2
-		lea	(v_score).w,a3
-		add.l	d0,(a3)		; add d0*10 to the score
-		move.l	#999999,d1
-		cmp.l	(a3),d1		; is score below 999999?
-		bhi.w	@belowmax	; if yes, branch
-		move.l	d1,(a3)		; reset	score to 999999
-		move.l	d1,(a2)
-
+		lea     (v_score).w,a3
+		add.l   d0,(a3)
+		move.l  #999999,d1
+		cmp.l   (a3),d1 ; is score below 999999?
+		bhi.s   @belowmax ; if yes, branch
+		move.l  d1,(a3) ; reset score to 999999
 	@belowmax:
-		move.l	(a3),d0
-		cmp.l	(a2),d0
-		blo.w	@locret_1C6B6
-		move.l	d0,(a2)
+		move.l  (a3),d0
+		cmp.l   (v_scorelife).w,d0 ; has Sonic got 50000+ points?
+		blo.s   @noextralife ; if not, branch
 
-		else
-
-			lea     (v_score).w,a3
-			add.l   d0,(a3)
-			move.l  #999999,d1
-			cmp.l   (a3),d1 ; is score below 999999?
-			bhi.s   @belowmax ; if yes, branch
-			move.l  d1,(a3) ; reset score to 999999
-		@belowmax:
-			move.l  (a3),d0
-			cmp.l   (v_scorelife).w,d0 ; has Sonic got 50000+ points?
-			blo.s   @noextralife ; if not, branch
-
-			addi.l  #5000,(v_scorelife).w ; increase requirement by 50000
-			tst.b   (v_megadrive).w
-			bmi.s   @noextralife ; branch if Mega Drive is Japanese
-			addq.b  #1,(v_lives).w ; give extra life
-			addq.b  #1,(f_lifecount).w
-			move.w	#bgm_ExtraLife,d0
-			jmp	(PlaySound).l
-		endc
+		addi.l  #5000,(v_scorelife).w ; increase requirement by 50000
+		tst.b   (v_megadrive).w
+		bmi.s   @noextralife ; branch if Mega Drive is Japanese
+		
+		;Mercury Lives Over/Underflow Fix
+		cmpi.b	#$63,(v_lives).w	; are lives at max?
+		beq.s	@playbgm
+		addq.b	#1,(v_lives).w	; add 1 to number of lives
+		addq.b	#1,(f_lifecount).w ; update the lives counter
+	@playbgm:
+		;end Lives Over/Underflow Fix
+		
+		move.w	#bgm_ExtraLife,d0
+		jmp	(PlaySound).l
 
 @locret_1C6B6:
 @noextralife:
@@ -8483,63 +8470,9 @@ AddPoints:
 ; End of function AddPoints
 
 		include	"_inc\HUD_Update.asm"
+		;include	"_inc\HUD (part 2).asm"
 
-; ---------------------------------------------------------------------------
-; Subroutine to	load countdown numbers on the continue screen
-; ---------------------------------------------------------------------------
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-ContScrCounter:
-		locVRAM	$DF80
-		lea	(vdp_data_port).l,a6
-		lea	(Hud_10).l,a2
-		moveq	#1,d6
-		moveq	#0,d4
-		lea	Art_Hud(pc),a1 ; load numbers patterns
-
-ContScr_Loop:
-		moveq	#0,d2
-		move.l	(a2)+,d3
-
-loc_1C95A:
-		sub.l	d3,d1
-		blo.s	loc_1C962
-		addq.w	#1,d2
-		bra.s	loc_1C95A
-; ===========================================================================
-
-loc_1C962:
-		add.l	d3,d1
-		lsl.w	#6,d2
-		lea	(a1,d2.w),a3
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		move.l	(a3)+,(a6)
-		dbf	d6,ContScr_Loop	; repeat 1 more	time
-
-		rts	
-; End of function ContScrCounter
-
-; ===========================================================================
-
-		include	"_inc\HUD (part 2).asm"
-
-Art_Hud:	incbin	"artunc\HUD Numbers.bin" ; 8x16 pixel numbers on HUD
+Art_Hud:	incbin	"artunc\(Mercury) HUD Numbers (centiseconds).bin" ; 8x16 pixel numbers on HUD
 		even
 Art_LivesNums:	incbin	"artunc\Lives Counter Numbers.bin" ; 8x8 pixel numbers on lives counter
 		even
@@ -8562,7 +8495,7 @@ Eni_SegaLogo:	incbin	"tilemaps\Sega Logo.bin" ; large Sega logo (mappings)
 	Eni_SegaLogo:	incbin	"tilemaps\Sega Logo (JP1).bin" ; large Sega logo (mappings)
 			even
 		endc
-Eni_Title:	incbin	"tilemaps\Title Screen.bin" ; title screen foreground (mappings)
+Eni_Title:	incbin	"tilemaps_u\Title Screen.bin" ; title screen foreground (mappings)
 		even
 Nem_TitleFg:	incbin	"artnem\Title Screen Foreground.bin"
 		even
@@ -8844,7 +8777,7 @@ Nem_Lives:	incbin	"artnem\HUD - Life Counter Icon.bin"
 		even
 Nem_Ring:	incbin	"artnem\Rings.bin"
 		even
-Nem_Monitors:	incbin	"artnem\Monitors.bin"
+Nem_Monitors:	incbin	"artnem\(Mercury) Monitors (optimised).bin"
 		even
 Nem_Explode:	incbin	"artnem\Explosion.bin"
 		even
@@ -8891,50 +8824,50 @@ Nem_Squirrel:	incbin	"artnem\Animal Squirrel.bin"
 ; ---------------------------------------------------------------------------
 ; Compressed graphics - primary patterns and block mappings
 ; ---------------------------------------------------------------------------
-Blk16_GHZ:	incbin	"map16\GHZ.bin"
+Blk16_GHZ:	incbin	"map16_u\GHZ.bin"
 		even
 Nem_GHZ_1st:	incbin	"artnem\8x8 - GHZ1.bin"	; GHZ primary patterns
 		even
 Nem_GHZ_2nd:	incbin	"artnem\8x8 - GHZ2.bin"	; GHZ secondary patterns
 		even
-Blk256_GHZ:	incbin	"map256\GHZ.bin"
+Blk256_GHZ:	incbin	"map256_u\GHZ.bin"
 		even
-Blk16_LZ:	incbin	"map16\LZ.bin"
+Blk16_LZ:	incbin	"map16_u\LZ.bin"
 		even
 Nem_LZ:		incbin	"artnem\8x8 - LZ.bin"	; LZ primary patterns
 		even
-Blk256_LZ:	incbin	"map256\LZ.bin"
+Blk256_LZ:	incbin	"map256_u\LZ.bin"
 		even
-Blk16_MZ:	incbin	"map16\MZ.bin"
+Blk16_MZ:	incbin	"map16_u\MZ.bin"
 		even
 Nem_MZ:		incbin	"artnem\8x8 - MZ.bin"	; MZ primary patterns
 		even
 Blk256_MZ:	if Revision=0
-		incbin	"map256\MZ.bin"
+		incbin	"map256_u\MZ.bin"
 		else
-		incbin	"map256\MZ (JP1).bin"
+		incbin	"map256_u\MZ (JP1).bin"
 		endc
 		even
-Blk16_SLZ:	incbin	"map16\SLZ.bin"
+Blk16_SLZ:	incbin	"map16_u\SLZ.bin"
 		even
 Nem_SLZ:	incbin	"artnem\8x8 - SLZ.bin"	; SLZ primary patterns
 		even
-Blk256_SLZ:	incbin	"map256\SLZ.bin"
+Blk256_SLZ:	incbin	"map256_u\SLZ.bin"
 		even
-Blk16_SYZ:	incbin	"map16\SYZ.bin"
+Blk16_SYZ:	incbin	"map16_u\SYZ.bin"
 		even
 Nem_SYZ:	incbin	"artnem\8x8 - SYZ.bin"	; SYZ primary patterns
 		even
-Blk256_SYZ:	incbin	"map256\SYZ.bin"
+Blk256_SYZ:	incbin	"map256_u\SYZ.bin"
 		even
-Blk16_SBZ:	incbin	"map16\SBZ.bin"
+Blk16_SBZ:	incbin	"map16_u\SBZ.bin"
 		even
 Nem_SBZ:	incbin	"artnem\8x8 - SBZ.bin"	; SBZ primary patterns
 		even
 Blk256_SBZ:	if Revision=0
-		incbin	"map256\SBZ.bin"
+		incbin	"map256_u\SBZ.bin"
 		else
-		incbin	"map256\SBZ (JP1).bin"
+		incbin	"map256_u\SBZ (JP1).bin"
 		endc
 		even
 ; ---------------------------------------------------------------------------

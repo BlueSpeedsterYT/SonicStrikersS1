@@ -239,6 +239,29 @@ out_of_range:	macro exit,pos
 		endm
 
 ; ---------------------------------------------------------------------------
+; play a sound effect or music
+; input: track, terminate routine (leave blank to not terminate)
+; ---------------------------------------------------------------------------
+
+music:		macro track,terminate
+		move.w	#track,d0
+		if (narg=1)
+		jsr	(PlaySound).l
+		else
+		jmp	(PlaySound).l
+		endc
+		endm
+
+sfx:		macro track,terminate
+		move.w	#track,d0
+		if (narg=1)
+		jsr	(PlaySound_Special).l
+		else
+		jmp	(PlaySound_Special).l
+		endc
+		endm
+
+; ---------------------------------------------------------------------------
 ; bankswitch between SRAM and ROM
 ; (remember to enable SRAM in the header first!)
 ; ---------------------------------------------------------------------------

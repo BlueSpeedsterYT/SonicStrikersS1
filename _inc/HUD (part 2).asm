@@ -1,12 +1,64 @@
 ; ---------------------------------------------------------------------------
+; Subroutine to	load countdown numbers on the continue screen
+; ---------------------------------------------------------------------------
+
+; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
+
+
+ContScrCounter:				; XREF: GM_Continue
+		locVRAM	$DF80
+		lea	($C00000).l,a6
+		lea	(Hud_10).l,a2
+		moveq	#1,d6
+		moveq	#0,d4
+		lea	Art_Hud(pc),a1 ; load numbers patterns
+
+ContScr_Loop:
+		moveq	#0,d2
+		move.l	(a2)+,d3
+
+loc_1C95A:
+		sub.l	d3,d1
+		bcs.s	loc_1C962
+		addq.w	#1,d2
+		bra.s	loc_1C95A
+; ===========================================================================
+
+loc_1C962:
+		add.l	d3,d1
+		lsl.w	#6,d2
+		lea	(a1,d2.w),a3
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		move.l	(a3)+,(a6)
+		dbf	d6,ContScr_Loop	; repeat 1 more	time
+
+		rts	
+; End of function ContScrCounter
+
+; ===========================================================================
+; ---------------------------------------------------------------------------
 ; HUD counter sizes
 ; ---------------------------------------------------------------------------
-Hud_100000:	dc.l 100000
+Hud_100000:	dc.l 100000		; XREF: Hud_Score
 Hud_10000:	dc.l 10000
-Hud_1000:	dc.l 1000
-Hud_100:	dc.l 100
-Hud_10:		dc.l 10
-Hud_1:		dc.l 1
+Hud_1000:	dc.l 1000		; XREF: Hud_TimeRingBonus
+Hud_100:	dc.l 100		; XREF: Hud_Rings
+Hud_10:		dc.l 10			; XREF: ContScrCounter; Hud_Secs; Hud_Lives
+Hud_1:		dc.l 1			; XREF: Hud_Mins
 
 ; ---------------------------------------------------------------------------
 ; Subroutine to	load time numbers patterns
@@ -15,17 +67,16 @@ Hud_1:		dc.l 1
 ; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
 
 
-Hud_Mins:
+Hud_Mins:				; XREF: Hud_ChkTime
 		lea	(Hud_1).l,a2
 		moveq	#0,d6
 		bra.s	loc_1C9BA
 ; End of function Hud_Mins
 
-
 ; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
 
 
-Hud_Secs:
+Hud_Secs:				; XREF: Hud_ChkTime
 		lea	(Hud_10).l,a2
 		moveq	#1,d6
 
@@ -83,7 +134,7 @@ loc_1C9D6:
 ; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
 
 
-Hud_TimeRingBonus:
+Hud_TimeRingBonus:			; XREF: Hud_ChkBonus
 		lea	(Hud_1000).l,a2
 		moveq	#3,d6
 		moveq	#0,d4
@@ -151,8 +202,8 @@ Hud_ClrBonusLoop:
 ; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
 
 
-Hud_Lives:
-		hudVRAM	$FBA0		; set VRAM address
+Hud_Lives:				; XREF: Hud_ChkLives
+		hudVRAM	$FBA0	; move.l	#$7BA00003,d0	; set VRAM address ;Mercury Macros
 		moveq	#0,d1
 		move.b	(v_lives).w,d1	; load number of lives
 		lea	(Hud_10).l,a2
@@ -179,8 +230,11 @@ loc_1CA98:
 		move.w	#1,d4
 
 loc_1CAA2:
+
+	;if HUDHasLeadingZeroes=0	;Mercury HUD Has Leading Zeroes
 		tst.w	d4
 		beq.s	Hud_ClrLives
+	;endc	;end HUD Has Leading Zeroes
 
 loc_1CAA6:
 		lsl.w	#5,d2

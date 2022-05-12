@@ -1,5 +1,11 @@
 ; Variables (v) and Flags (f)
 
+;ReadySonic ported stuff I guess...
+
+v_centstep:	= $FFFFFEBF	; value used to increment centiseconds
+
+;Regular Sonic 1 flags
+
 v_regbuffer:	equ $FFFFFC00	; stores registers d0-a7 during an error event ($40 bytes)
 v_spbuffer:	equ $FFFFFC40	; stores most recent sp address (4 bytes)
 v_errortype:	equ $FFFFFC44	; error type
