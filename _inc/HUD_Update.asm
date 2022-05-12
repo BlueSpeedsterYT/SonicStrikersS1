@@ -59,9 +59,6 @@ HUD_Update:
 		cmpi.b	#100,(a1)
 		bcs.s	Hud_DoCent
 		
-		addq.b	#1,-(a1)	; increment 1/60s counter
-		cmpi.b	#60,(a1)	; check if passed 60
-		bcs.s	Hud_ChkLives
 		move.b	#0,(a1)
 		addq.b	#1,-(a1)	; increment second counter
 		cmpi.b	#60,(a1)	; check if passed 60
