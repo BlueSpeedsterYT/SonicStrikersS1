@@ -1,9 +1,10 @@
-s1disasm_git
-============
+SONIC STRIKERS: MECHA MADNESS - Sonic 1 Disassembly
+====================================
+Developed using the Sonic 1 GitHub Disassembly from Sonic Retro.
 
-The very latest Sonic 1 Disassembly.
+For more information in regards to that topic, see: http://info.sonicretro.org/Disassemblies
 
-See: http://info.sonicretro.org/Disassemblies
+Should be noted that the source code available is not and will never be a match to the current GitHub repo.
 
 DISCLAIMER:
 Any and all content presented in this repository is presented for informational and educational purposes only.
