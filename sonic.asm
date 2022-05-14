@@ -7,6 +7,7 @@
 
 ; ===========================================================================
 
+	include "Debugger.asm"
 	include	"Constants.asm"
 	include	"Variables.asm"
 	include	"Macros.asm"
@@ -378,173 +379,6 @@ CheckSumError:
 		bra.s	@endlessloop
 ; ===========================================================================
 
-BusError:
-		move.b	#2,(v_errortype).w
-		bra.s	loc_43A
-
-AddressError:
-		move.b	#4,(v_errortype).w
-		bra.s	loc_43A
-
-IllegalInstr:
-		move.b	#6,(v_errortype).w
-		addq.l	#2,2(sp)
-		bra.s	loc_462
-
-ZeroDivide:
-		move.b	#8,(v_errortype).w
-		bra.s	loc_462
-
-ChkInstr:
-		move.b	#$A,(v_errortype).w
-		bra.s	loc_462
-
-TrapvInstr:
-		move.b	#$C,(v_errortype).w
-		bra.s	loc_462
-
-PrivilegeViol:
-		move.b	#$E,(v_errortype).w
-		bra.s	loc_462
-
-Trace:
-		move.b	#$10,(v_errortype).w
-		bra.s	loc_462
-
-Line1010Emu:
-		move.b	#$12,(v_errortype).w
-		addq.l	#2,2(sp)
-		bra.s	loc_462
-
-Line1111Emu:
-		move.b	#$14,(v_errortype).w
-		addq.l	#2,2(sp)
-		bra.s	loc_462
-
-ErrorExcept:
-		move.b	#0,(v_errortype).w
-		bra.s	loc_462
-; ===========================================================================
-
-loc_43A:
-		disable_ints
-		addq.w	#2,sp
-		move.l	(sp)+,(v_spbuffer).w
-		addq.w	#2,sp
-		movem.l	d0-a7,(v_regbuffer).w
-		bsr.w	ShowErrorMessage
-		move.l	2(sp),d0
-		bsr.w	ShowErrorValue
-		move.l	(v_spbuffer).w,d0
-		bsr.w	ShowErrorValue
-		bra.s	loc_478
-; ===========================================================================
-
-loc_462:
-		disable_ints
-		movem.l	d0-a7,(v_regbuffer).w
-		bsr.w	ShowErrorMessage
-		move.l	2(sp),d0
-		bsr.w	ShowErrorValue
-
-loc_478:
-		bsr.w	ErrorWaitForC
-		movem.l	(v_regbuffer).w,d0-a7
-		enable_ints
-		rte	
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-ShowErrorMessage:
-		lea	(vdp_data_port).l,a6
-		locVRAM	$F800
-		lea	(Art_Text).l,a0
-		move.w	#$27F,d1
-	@loadgfx:
-		move.w	(a0)+,(a6)
-		dbf	d1,@loadgfx
-
-		moveq	#0,d0		; clear	d0
-		move.b	(v_errortype).w,d0 ; load error code
-		move.w	ErrorText(pc,d0.w),d0
-		lea	ErrorText(pc,d0.w),a0
-		locVRAM	(vram_fg+$604)
-		moveq	#$12,d1		; number of characters (minus 1)
-
-	@showchars:
-		moveq	#0,d0
-		move.b	(a0)+,d0
-		addi.w	#$790,d0
-		move.w	d0,(a6)
-		dbf	d1,@showchars	; repeat for number of characters
-		rts	
-; End of function ShowErrorMessage
-
-; ===========================================================================
-ErrorText:	dc.w @exception-ErrorText, @bus-ErrorText
-		dc.w @address-ErrorText, @illinstruct-ErrorText
-		dc.w @zerodivide-ErrorText, @chkinstruct-ErrorText
-		dc.w @trapv-ErrorText, @privilege-ErrorText
-		dc.w @trace-ErrorText, @line1010-ErrorText
-		dc.w @line1111-ErrorText
-@exception:	dc.b "ERROR EXCEPTION    "
-@bus:		dc.b "BUS ERROR          "
-@address:	dc.b "ADDRESS ERROR      "
-@illinstruct:	dc.b "ILLEGAL INSTRUCTION"
-@zerodivide:	dc.b "@ERO DIVIDE        "
-@chkinstruct:	dc.b "CHK INSTRUCTION    "
-@trapv:		dc.b "TRAPV INSTRUCTION  "
-@privilege:	dc.b "PRIVILEGE VIOLATION"
-@trace:		dc.b "TRACE              "
-@line1010:	dc.b "LINE 1010 EMULATOR "
-@line1111:	dc.b "LINE 1111 EMULATOR "
-		even
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-ShowErrorValue:
-		move.w	#$7CA,(a6)	; display "$" symbol
-		moveq	#7,d2
-
-	@loop:
-		rol.l	#4,d0
-		bsr.s	@shownumber	; display 8 numbers
-		dbf	d2,@loop
-		rts	
-; End of function ShowErrorValue
-
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-@shownumber:
-		move.w	d0,d1
-		andi.w	#$F,d1
-		cmpi.w	#$A,d1
-		blo.s	@chars0to9
-		addq.w	#7,d1		; add 7 for characters A-F
-
-	@chars0to9:
-		addi.w	#$7C0,d1
-		move.w	d1,(a6)
-		rts	
-; End of function sub_5CA
-
-
-; ||||||||||||||| S U B	R O U T	I N E |||||||||||||||||||||||||||||||||||||||
-
-
-ErrorWaitForC:
-		bsr.w	ReadJoypads
-		cmpi.b	#btnC,(v_jpadpress1).w ; is button C pressed?
-		bne.w	ErrorWaitForC	; if not, branch
-		rts	
-; End of function ErrorWaitForC
-
-; ===========================================================================
-
 Art_Text:	incbin	"artunc\menutext.bin" ; text used in level select and debug mode
 		even
 
@@ -680,11 +514,7 @@ VBla_08:
 
 		writeVRAM	v_hscrolltablebuffer,$380,vram_hscroll
 		writeVRAM	v_spritetablebuffer,$280,vram_sprites
-		tst.b	(f_sonframechg).w ; has Sonic's sprite changed?
-		beq.s	@nochg		; if not, branch
-
-		writeVRAM	v_sgfx_buffer,$2E0,vram_sonic ; load new Sonic gfx
-		move.b	#0,(f_sonframechg).w
+		jsr	(ProcessDMAQueue).l
 
 	@nochg:
 		startZ80
@@ -729,11 +559,7 @@ VBla_0A:
 		writeVRAM	v_hscrolltablebuffer,$380,vram_hscroll
 		startZ80
 		bsr.w	PalCycle_SS
-		tst.b	(f_sonframechg).w ; has Sonic's sprite changed?
-		beq.s	@nochg		; if not, branch
-
-		writeVRAM	v_sgfx_buffer,$2E0,vram_sonic ; load new Sonic gfx
-		move.b	#0,(f_sonframechg).w
+		jsr	(ProcessDMAQueue).l
 
 	@nochg:
 		tst.w	(v_demolength).w	; is there time left on the demo?
@@ -761,10 +587,7 @@ VBla_0C:
 		move.w	(v_hbla_hreg).w,(a5)
 		writeVRAM	v_hscrolltablebuffer,$380,vram_hscroll
 		writeVRAM	v_spritetablebuffer,$280,vram_sprites
-		tst.b	(f_sonframechg).w
-		beq.s	@nochg
-		writeVRAM	v_sgfx_buffer,$2E0,vram_sonic
-		move.b	#0,(f_sonframechg).w
+		jsr	(ProcessDMAQueue).l
 
 	@nochg:
 		startZ80
@@ -800,10 +623,7 @@ VBla_16:
 		writeVRAM	v_spritetablebuffer,$280,vram_sprites
 		writeVRAM	v_hscrolltablebuffer,$380,vram_hscroll
 		startZ80
-		tst.b	(f_sonframechg).w
-		beq.s	@nochg
-		writeVRAM	v_sgfx_buffer,$2E0,vram_sonic
-		move.b	#0,(f_sonframechg).w
+		jsr	(ProcessDMAQueue).l
 
 	@nochg:
 		tst.w	(v_demolength).w
@@ -912,9 +732,9 @@ JoypadInit:
 		stopZ80
 		waitZ80
 		moveq	#$40,d0
-		move.b	d0,($A10009).l	; init port 1 (joypad 1)
-		move.b	d0,($A1000B).l	; init port 2 (joypad 2)
-		move.b	d0,($A1000D).l	; init port 3 (expansion/extra)
+		move.b	d0,(jpad_init_1).l	; init port 1 (joypad 1)
+		move.b	d0,(jpad_init_2).l	; init port 2 (joypad 2)
+		move.b	d0,(jpad_init_3).l	; init port 3 (expansion/extra)
 		startZ80
 		rts	
 ; End of function JoypadInit
@@ -927,7 +747,7 @@ JoypadInit:
 
 ReadJoypads:
 		lea	(v_jpadhold1).w,a0 ; address where joypad states are written
-		lea	($A10003).l,a1	; first	joypad port
+		lea	(jpad_port_1).l,a1	; first	joypad port
 		bsr.s	@read		; do the first joypad
 		addq.w	#2,a1		; do the second	joypad
 
@@ -1120,6 +940,7 @@ TilemapToVRAM:
 		rts	
 ; End of function TilemapToVRAM
 
+		include	"_inc\(Mercury) DMA Queue.asm"
 		include	"_inc\Nemesis Decompression.asm"
 
 
@@ -2826,6 +2647,8 @@ Level_ClrRam:
 		move.w	#$8720,(a6)		; set background colour (line 3; colour 0)
 		move.w	#$8A00+223,(v_hbla_hreg).w ; set palette change position (for water)
 		move.w	(v_hbla_hreg).w,(a6)
+		clr.w	($FFFFC800).w
+		move.l	#$FFFFC800,($FFFFC8FC).w
 		cmpi.b	#id_LZ,(v_zone).w ; is level LZ?
 		bne.s	Level_LoadPal	; if not, branch
 
@@ -3392,7 +3215,9 @@ loc_47D4:
 		lea	(Nem_TitleCard).l,a0 ; load title card patterns
 		bsr.w	NemDec
 		jsr	(Hud_Base).l
-		enable_ints
+		clr.w	($FFFFC800).w
+		move.l	#$FFFFC800,($FFFFC8FC).w
+		;enable_ints
 		moveq	#palid_SSResult,d0
 		bsr.w	PalLoad2	; load results screen palette
 		moveq	#plcid_Main,d0
@@ -4048,7 +3873,7 @@ End_MoveSon2:
 		move.w	d0,(v_jpadhold2).w ; stop Sonic moving
 		move.w	d0,(v_player+obInertia).w
 		move.b	#$81,(f_lockmulti).w ; lock controls & position
-		move.b	#fr_Wait2,(v_player+obFrame).w
+		move.b	#$BD,(v_player+obFrame).w
 		move.w	#(id_Wait<<8)+id_Wait,(v_player+obAnim).w ; use "standing" animation
 		move.b	#3,(v_player+obTimeFrame).w
 		rts	
@@ -5796,6 +5621,18 @@ Obj44_SolidWall2:
 		ext.w	d3
 		add.w	d3,d2
 		move.w	obY(a1),d3
+		
+		cmpi.b	#id_SpinDash,obAnim(a1)
+		beq.s	@short
+	
+		cmpi.b	#id_Duck,obAnim(a1)
+		bne.s	@skip
+		
+	@short:
+		subi.w	#5,d2
+		addi.w	#5,d3
+		
+	@skip:
 		sub.w	obY(a0),d3
 		add.w	d2,d3
 		bmi.s	loc_8B48
@@ -5857,7 +5694,7 @@ Map_MisDissolve:include	"_maps\Buzz Bomber Missile Dissolve.asm"
 Map_Animal1:	include	"_maps\Animals 1.asm"
 Map_Animal2:	include	"_maps\Animals 2.asm"
 Map_Animal3:	include	"_maps\Animals 3.asm"
-Map_Poi:	include	"_maps\Points.asm"
+Map_Poi:	include	"_maps\Points.new.asm"
 
 		include	"_incObj\1F Crabmeat.asm"
 		include	"_anim\Crabmeat.asm"
@@ -6372,8 +6209,9 @@ BuildSprites:
 		btst	#5,d4		; is static mappings flag on?
 		bne.s	@drawFrame	; if yes, branch
 		move.b	obFrame(a0),d1
-		add.b	d1,d1
+		add.w	d1,d1
 		adda.w	(a1,d1.w),a1	; get mappings frame address
+		moveq	#0,d1
 		move.b	(a1)+,d1	; number of sprite pieces
 		subq.b	#1,d1
 		bmi.s	@setVisible
@@ -6735,6 +6573,9 @@ loc_DA02:
 loc_DA10:
 		bsr.w	loc_DA3C
 		beq.s	loc_DA02
+		tst.b	$04(a0)		; was this object a remember state?
+		bpl.s	loc_DA16	; if not, branch
+		subq.b	#$01,(a2)	; move right counter back
 
 loc_DA16:
 		move.l	a0,(v_opl_data).w
@@ -6764,7 +6605,7 @@ locret_DA3A:
 loc_DA3C:
 		tst.b	4(a0)
 		bpl.s	OPL_MakeItem
-		bset	#7,2(a2,d2.w)
+		btst	#7,2(a2,d2.w)
 		beq.s	OPL_MakeItem
 		addq.w	#6,a0
 		moveq	#0,d0
@@ -6785,6 +6626,7 @@ OPL_MakeItem:
 		move.b	d1,obStatus(a1)
 		move.b	(a0)+,d0
 		bpl.s	loc_DA80
+		bset	#$07,$02(a2,d2.w)	; set as removed
 		andi.b	#$7F,d0
 		move.b	d2,obRespawnNo(a1)
 
@@ -6958,6 +6800,8 @@ Sonic_Main:	; Routine 0
 		move.w	#$80,(v_sonspeeddec).w ; Sonic's deceleration
 
 Sonic_Control:	; Routine 2
+		bsr.s    Sonic_PanCamera    ; ++add this++
+		
 		tst.w	(f_debugmode).w	; is debug cheat enabled?
 		beq.s	loc_12C58	; if not, branch
 		btst	#bitB,(v_jpadpress1).w ; is button B pressed?
@@ -6965,6 +6809,8 @@ Sonic_Control:	; Routine 2
 		move.w	#1,(v_debuguse).w ; change Sonic into a ring/item
 		clr.b	(f_lockctrl).w
 		rts	
+		
+		include    "_incObj\Sonic PanCamera.asm"    ; ++add this++
 ; ===========================================================================
 
 loc_12C58:
@@ -7032,6 +6878,7 @@ MusicList2:
 ; ---------------------------------------------------------------------------
 
 Sonic_MdNormal:
+		bsr.w	Sonic_SpinDash
 		bsr.w	Sonic_Jump
 		bsr.w	Sonic_SlopeResist
 		bsr.w	Sonic_Move
@@ -7044,6 +6891,9 @@ Sonic_MdNormal:
 ; ===========================================================================
 
 Sonic_MdJump:
+
+		bclr	#0,$39(a0)	; clear Spin Dash flag
+
 		bsr.w	Sonic_JumpHeight
 		bsr.w	Sonic_JumpDirection
 		bsr.w	Sonic_LevelBound
@@ -7070,6 +6920,9 @@ Sonic_MdRoll:
 ; ===========================================================================
 
 Sonic_MdJump2:
+
+		bclr	#0,$39(a0)	; clear Spin Dash flag
+
 		bsr.w	Sonic_JumpHeight
 		bsr.w	Sonic_JumpDirection
 		bsr.w	Sonic_LevelBound
@@ -7110,6 +6963,7 @@ locret_13302:
 		include	"_incObj\Sonic Roll.asm"
 		include	"_incObj\Sonic Jump.asm"
 		include	"_incObj\Sonic JumpHeight.asm"
+		include	"_incObj\(Mercury) Sonic SpinDash.asm"
 		include	"_incObj\Sonic SlopeResist.asm"
 		include	"_incObj\Sonic RollRepel.asm"
 		include	"_incObj\Sonic SlopeRepel.asm"
@@ -7119,8 +6973,8 @@ locret_13302:
 		include	"_incObj\Sonic (part 2).asm"
 		include	"_incObj\Sonic Loops.asm"
 		include	"_incObj\Sonic Animate.asm"
-		include	"_anim\Sonic.asm"
-		include	"_incObj\Sonic LoadGfx.asm"
+		include	"_anim\Sonic (without frame IDs).asm"
+		include	"_incObj\(Mercury) Sonic LoadGfx (dma).asm"
 
 		include	"_incObj\0A Drowning Countdown.asm"
 
@@ -8333,10 +8187,10 @@ SS_StartLoc:	include	"_inc\Start Location Array - Special Stages.asm"
 SS_Load:
 		moveq	#0,d0
 		move.b	(v_lastspecial).w,d0 ; load number of last special stage entered
-		addq.b	#1,(v_lastspecial).w
-		cmpi.b	#6,(v_lastspecial).w
-		blo.s	SS_ChkEmldNum
-		move.b	#0,(v_lastspecial).w ; reset if higher than 6
+		cmpi.b	#6,d0
+		bcs.s	SS_ChkEmldNum
+		move.b	#0,d0 ; reset if higher than 6
+		move.b	d0,(v_lastspecial).w
 
 SS_ChkEmldNum:
 		cmpi.b	#6,(v_emeralds).w ; do you have all emeralds?
@@ -8516,6 +8370,13 @@ SonicDynPLC:	include	"_maps\Sonic - Dynamic Gfx Script.asm"
 ; ---------------------------------------------------------------------------
 Art_Sonic:	incbin	"artunc\Sonic.bin"	; Sonic
 		even
+; ---------------------------------------------------------------------------
+; Uncompressed graphics	- Shields and Stars
+; ---------------------------------------------------------------------------
+;Art_Shield:	incbin	"artunc\Shield.bin"
+		;even
+;Art_Stars:	incbin	"artunc\Invincibility Stars.bin"
+		;even
 ; ---------------------------------------------------------------------------
 ; Compressed graphics - various
 ; ---------------------------------------------------------------------------
@@ -8781,7 +8642,7 @@ Nem_Monitors:	incbin	"artnem\(Mercury) Monitors (optimised).bin"
 		even
 Nem_Explode:	incbin	"artnem\Explosion.bin"
 		even
-Nem_Points:	incbin	"artnem\Points.bin"	; points from destroyed enemy or object
+Nem_Points:	incbin	"artnem\Enemy Points.bin"	; points from destroyed enemy or object
 		even
 Nem_GameOver:	incbin	"artnem\Game Over.bin"	; game over / time over
 		even
@@ -9254,6 +9115,13 @@ ObjPos_Null:	dc.b $FF, $FF, 0, 0, 0,	0
 		;dcb.b ($10000-(*%$10000))-(EndOfRom-SoundDriver),$FF
 
 SoundDriver:	include "s1.sounddriver.asm"
+
+; ==============================================================
+; --------------------------------------------------------------
+; Debugging modules
+; --------------------------------------------------------------
+
+   include   "ErrorHandler.asm"
 
 ; end of 'ROM'
 		even

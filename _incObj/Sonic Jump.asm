@@ -36,6 +36,9 @@ loc_1341C:
 		addq.l	#4,sp
 		move.b	#1,$3C(a0)
 		clr.b	$38(a0)
+	;Mercury Clear Control Lock When Jump
+		clr.w	$3E(a0)	;clear horiz control lock	;Mercury Constants
+	;end Clear Control Lock When Jump
 		move.w	#sfx_Jump,d0
 		jsr	(PlaySound_Special).l	; play jumping sound
 		move.b	#$13,obHeight(a0)

@@ -16,15 +16,16 @@ AnimateSprite:
 		move.b	#0,obTimeFrame(a0) ; reset frame duration
 
 Anim_Run:
-		subq.b	#1,obTimeFrame(a0) ; subtract 1 from frame duration
+		subq.b	#1,obTimeFrame(a0)	; subtract 1 from frame	duration
 		bpl.s	Anim_Wait	; if time remains, branch
 		add.w	d0,d0
 		adda.w	(a1,d0.w),a1	; jump to appropriate animation	script
-		move.b	(a1),obTimeFrame(a0) ; load frame duration
+		move.b	(a1),obTimeFrame(a0)	; load frame duration
 		moveq	#0,d1
-		move.b	obAniFrame(a0),d1 ; load current frame number
+		move.b	obAniFrame(a0),d1	; load current frame number
 		move.b	1(a1,d1.w),d0	; read sprite number from script
-		bmi.s	Anim_End_FF	; if animation is complete, branch
+		cmp.b	#$FA,d0					; MJ: is it a flag from FA to FF?
+		bhs	Anim_End_FF				; MJ: if so, branch to flag routines
 
 Anim_Next:
 		move.b	d0,d1

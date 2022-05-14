@@ -27,7 +27,12 @@ Sonic_LevelBound:
 		bls.s	@sides		; if yes, branch
 
 	@chkbottom:
-		move.w	(v_limitbtm2).w,d0
+	
+	;Mercury High Speed Camera Fix
+		;move.w	(v_limitbtm2).w,d0
+		move.w	(v_limitbtm1).w,d0
+	;end High Speed Camera Fix
+	
 		addi.w	#$E0,d0
 		cmp.w	obY(a0),d0	; has Sonic touched the	bottom boundary?
 		blt.s	@bottom		; if yes, branch
@@ -36,13 +41,16 @@ Sonic_LevelBound:
 
 @bottom:
 		cmpi.w	#(id_SBZ<<8)+1,(v_zone).w ; is level SBZ2 ?
-		bne.w	KillSonic	; if not, kill Sonic
+		bne.s	@killsonic	; if not, kill Sonic
 		cmpi.w	#$2000,(v_player+obX).w
-		bcs.w	KillSonic
+		bcs.s	@killsonic
 		clr.b	(v_lastlamp).w	; clear	lamppost counter
 		move.w	#1,(f_restart).w ; restart the level
 		move.w	#(id_LZ<<8)+3,(v_zone).w ; set level to SBZ3 (LZ4)
 		rts	
+		
+@killsonic:
+		jmp		KillSonic
 ; ===========================================================================
 
 @sides:

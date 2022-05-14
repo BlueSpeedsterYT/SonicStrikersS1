@@ -156,6 +156,11 @@ UpdateMusic:
 		jsr	PlaySoundID(pc)
 ; loc_71BC8:
 @nonewsound:
+		tst.b	(v_spindashsfx2).w
+		beq.s	@cont
+		subq.b	#1,(v_spindashsfx2).w
+
+	@cont:
 		lea	v_music_dac_track(a6),a5
 		tst.b	(a5)			; Is DAC track playing? (TrackPlaybackControl)
 		bpl.s	@dacdone		; Branch if not
@@ -657,10 +662,12 @@ PlaySoundID:
 		; DANGER! Special SFXes end at $D0, yet this checks until $DF; attempting to
 		; play sounds $D1-$DF will cause a crash! Remove the '+$10' and change the 'blo' to a 'bls'
 		; and uncomment the two lines below to fix this.
-		cmpi.b	#spec__Last+$10,d7	; Is this special sfx ($D0-$DF)?
-		blo.w	Sound_PlaySpecial	; Branch if yes
-		;cmpi.b	#flg__First,d7		; Is this after special sfx but before $E0?
-		;blo.w	@locret			; Return if yes
+		cmpi.b	#$D1,d7	; Is this spindash sfx ($D1)?
+		bcs.w	Sound_PlaySpinDash	; Branch if yes
+		cmpi.b	#spec__Last,d7	; Is this final special sfx ($DF)?
+		ble.w	Sound_PlaySpecial	; Branch if yes
+		cmpi.b	#flg__First,d7		; Is this after special sfx but before $E0?
+		blo.w	@locret			; Return if yes
 		cmpi.b	#flg__Last,d7		; Is this $E0-$E4?
 		bls.s	Sound_E0toE4		; Branch if yes
 ; locret_71F8C:
@@ -687,21 +694,44 @@ ptr_flgend
 ; ---------------------------------------------------------------------------
 ; Sound_E1: PlaySega:
 PlaySegaSound:
-		move.b	#$88,(z80_dac_sample).l	; Queue Sega PCM
-		startZ80
-		move.w	#$11,d1
+
+	;Mercury Sega Sound Fix
+		lea	(SegaPCM).l,a2			; Load the SEGA PCM sample into a2. It's important that we use a2 since a0 and a1 are going to be used up ahead when reading the joypad ports 
+		move.l	#$6978,d3			; Load the size of the SEGA PCM sample into d3 
+		move.b	#$2A,(ym2612_a0).l		; $A04000 = $2A -> Write to DAC channel	  
+PlayPCM_Loop:	  
+		move.b	(a2)+,(ym2612_d0).l		; Write the PCM data (contained in a2) to $A04001 (YM2612 register D0) 
+		move.w	#$2,d0				; Write the pitch ($2 in this case) to d0 
+		dbf	d0,*				; Decrement d0; jump to itself if not 0. (for pitch control, avoids playing the sample too fast)  
+		sub.l	#1,d3				; Subtract 1 from the PCM sample size 
+		beq.s	return_PlayPCM			; If d3 = 0, we finished playing the PCM sample, so stop playing, leave this loop, and unfreeze the 68K 
+		lea	(v_jpadhold1).w,a0		; address where JoyPad states are written 
+		lea	(jpad_port_1).l,a1			; address where JoyPad states are read from 
+		jsr	(ReadJoypads).w			; Read only the first joypad port. It's important that we do NOT do the two ports, we don't have the cycles for that 
+		btst	#btnStart,(v_jpadhold1).w	; Check for Start button 
+		bne.s	return_PlayPCM			; If start is pressed, stop playing, leave this loop, and unfreeze the 68K 
+		bra.s	PlayPCM_Loop			; Otherwise, continue playing PCM sample 
+return_PlayPCM: 
+		addq.w	#4,sp 
+		rts
+		
+		;move.b	#$88,(z80_dac_sample).l	; Queue Sega PCM
+		;startZ80
+		;move.w	#$11,d1
 ; loc_71FC0:
-@busyloop_outer:
-		move.w	#-1,d0
+;@busyloop_outer:
+		;move.w	#-1,d0
 ; loc_71FC4:
-@busyloop:
-		nop	
-		dbf	d0,@busyloop
+;@busyloop:
+		;nop	
+		;dbf	d0,@busyloop
 
-		dbf	d1,@busyloop_outer
+		;dbf	d1,@busyloop_outer
 
-		addq.w	#4,sp	; Tamper return value so we don't return to caller
-		rts	
+		;addq.w	#4,sp	; Tamper return value so we don't return to caller
+		;rts	
+	;end Sega Sound Fix
+	
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
 ; Play music track $81-$9F
@@ -911,16 +941,53 @@ PSGInitBytes:	dc.b $80, $A0, $C0	; Specifically, these configure writes to the P
 		even
 ; ===========================================================================
 ; ---------------------------------------------------------------------------
+; Play Spin Dash sound effect
+; ---------------------------------------------------------------------------
+;Sound_D1toDF:
+Sound_PlaySpinDash:
+	tst.b	f_1up_playing(a6)	; Is 1-up playing?
+	bne.w	clear_sndprio		; Exit is it is
+	tst.b	v_fadeout_counter(a6)	; Is music being faded out?
+	bne.w	clear_sndprio		; Exit if it is
+	tst.b	f_fadein_flag(a6)	; Is music being faded in?
+	bne.w	clear_sndprio		; Exit if it is
+	clr.b	(v_spindashsfx1).w
+	cmp.b	#sfx_SpinDash,d7		; is this the Spin Dash sound?
+	bne.s	@cont3	; if not, branch
+	move.w	d0,-(sp)
+	move.b	(v_spindashsfx3).w,d0	; store extra frequency
+	tst.b	(v_spindashsfx2).w	; is the Spin Dash timer active?
+	bne.s	@cont1		; if it is, branch
+	move.b	#-1,d0		; otherwise, reset frequency (becomes 0 on next line)
+
+@cont1:
+	addq.b	#1,d0
+	cmp.b	#$C,d0		; has the limit been reached?
+	bcc.s	@cont2		; if it has, branch
+	move.b	d0,(v_spindashsfx3).w	; otherwise, set new frequency
+
+@cont2:
+	move.b	#1,(v_spindashsfx1).w	; set flag
+	move.b	#60,(v_spindashsfx2).w	; set timer
+	move.w	(sp)+,d0
+
+@cont3:
+	movea.l	(Go_SoundIndex).l,a0
+	sub.b	#sfx__First,d7
+	bra.s	sfx_Common
+	
+; ---------------------------------------------------------------------------
 ; Play normal sound effect
 ; ---------------------------------------------------------------------------
 ; Sound_A0toCF:
 Sound_PlaySFX:
 		tst.b	f_1up_playing(a6)	; Is 1-up playing?
-		bne.w	@clear_sndprio		; Exit is it is
+		bne.w	clear_sndprio		; Exit is it is
 		tst.b	v_fadeout_counter(a6)	; Is music being faded out?
-		bne.w	@clear_sndprio		; Exit if it is
+		bne.w	clear_sndprio		; Exit if it is
 		tst.b	f_fadein_flag(a6)	; Is music being faded in?
-		bne.w	@clear_sndprio		; Exit if it is
+		bne.w	clear_sndprio		; Exit if it is
+		clr.b	(v_spindashsfx1).w
 		cmpi.b	#sfx_Ring,d7		; is ring sound	effect played?
 		bne.s	@sfx_notRing		; if not, branch
 		tst.b	v_ring_speaker(a6)	; Is the ring sound playing on right speaker?
@@ -934,12 +1001,14 @@ Sound_PlaySFX:
 		cmpi.b	#sfx_Push,d7		; is "pushing" sound played?
 		bne.s	@sfx_notPush		; if not, branch
 		tst.b	f_push_playing(a6)	; Is pushing sound already playing?
-		bne.w	@locret			; Return if not
+		bne.w	locret			; Return if not
 		move.b	#$80,f_push_playing(a6)	; Mark it as playing
 ; Sound_notA7:
 @sfx_notPush:
 		movea.l	(Go_SoundIndex).l,a0
 		subi.b	#sfx__First,d7		; Make it 0-based
+		
+sfx_Common: ;Mercury Spin Dash SFX
 		lsl.w	#2,d7			; Convert sfx ID into index
 		movea.l	(a0,d7.w),a3		; SFX data pointer
 		movea.l	a3,a1
@@ -947,12 +1016,10 @@ Sound_PlaySFX:
 		move.w	(a1)+,d1		; Voice pointer
 		add.l	a3,d1			; Relative pointer
 		move.b	(a1)+,d5		; Dividing timing
-		; DANGER! there is a missing 'moveq	#0,d7' here, without which SFXes whose
-		; index entry is above $3F will cause a crash. This is actually the same way that
-		; this bug is fixed in Ristar's driver.
 		move.b	(a1)+,d7	; Number of tracks (FM + PSG)
 		subq.b	#1,d7
 		moveq	#TrackSz,d6
+		
 ; loc_72228:
 @sfx_loadloop:
 		moveq	#0,d3
@@ -981,7 +1048,8 @@ Sound_PlaySFX:
 		move.b	d0,(psg_input).l
 ; loc_7226E:
 @sfxoverridedone:
-		movea.l	SFX_SFXChannelRAM(pc,d3.w),a5
+		lea	SFX_SFXChannelRAM(pc),a5
+		movea.l	(a5,d3.w),a5
 		movea.l	a5,a2
 		moveq	#(TrackSz/4)-1,d0	; $30 bytes
 ; loc_72276:
@@ -996,6 +1064,15 @@ Sound_PlaySFX:
 		add.l	a3,d0				; Relative pointer
 		move.l	d0,TrackDataPointer(a5)	; Store track pointer
 		move.w	(a1)+,TrackTranspose(a5)	; load FM/PSG channel modifier
+		
+		tst.b	(v_spindashsfx1).w	; is the Spin Dash sound playing?
+		beq.s	@cont		; if not, branch
+		move.w	d0,-(sp)
+		move.b	(v_spindashsfx3).w,d0
+		add.b	d0,TrackTranspose(a5)
+		move.w	(sp)+,d0
+
+	@cont:
 		move.b	#1,TrackDurationTimeout(a5)	; Set duration of first "note"
 		move.b	d6,TrackStackPointer(a5)	; set "gosub" (coord flag $F8) stack init value
 		tst.b	d4				; Is this a PSG channel?
@@ -1012,13 +1089,21 @@ Sound_PlaySFX:
 ; loc_722B8:
 @doneoverride:
 		tst.b	v_sfx_psg3_track+TrackPlaybackControl(a6)	; Is SFX being played?
-		bpl.s	@locret						; Branch if not
+		bpl.s	locret						; Branch if not
 		bset	#2,v_spcsfx_psg3_track+TrackPlaybackControl(a6)	; Set 'SFX is overriding' bit
-; locret_722C4:
+locret_722C4:
+		rts	
+locret:
+		rts	
 @locret:
 		rts	
 ; ===========================================================================
-; loc_722C6:
+loc_722C6:
+		clr.b	v_sndprio(a6)	; Clear priority
+		rts	
+clear_sndprio:
+		clr.b	v_sndprio(a6)	; Clear priority
+		rts	
 @clear_sndprio:
 		clr.b	v_sndprio(a6)	; Clear priority
 		rts	
@@ -2576,6 +2661,7 @@ ptr_sndend
 ; ---------------------------------------------------------------------------
 SpecSoundIndex:
 ptr_sndD0:	dc.l SoundD0
+ptr_sndD1:	dc.l SoundD1
 ptr_specend
 SoundA0:	incbin	"sound/sfx/SndA0 - Jump.bin"
 		even
@@ -2674,6 +2760,8 @@ SoundCE:	incbin	"sound/sfx/SndCE - Ring Left Speaker.bin"
 SoundCF:	incbin	"sound/sfx/SndCF - Signpost.bin"
 		even
 SoundD0:	incbin	"sound/sfx/SndD0 - Waterfall.bin"
+		even
+SoundD1:	incbin	"sound/sfx/(Mercury) SndD1 - SpinDash.bin"
 		even
 
 		; Don't let Sega sample cross $8000-byte boundary

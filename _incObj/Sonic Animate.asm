@@ -14,6 +14,8 @@ Sonic_Animate:
 		move.b	d0,obNextAni(a0) ; set to "no restart"
 		move.b	#0,obAniFrame(a0) ; reset animation
 		move.b	#0,obTimeFrame(a0) ; reset frame duration
+		
+		bclr	#5,obStatus(a0)	; clear pushing flag
 
 	@do:
 		add.w	d0,d0
@@ -32,7 +34,9 @@ Sonic_Animate:
 		moveq	#0,d1
 		move.b	obAniFrame(a0),d1 ; load current frame number
 		move.b	1(a1,d1.w),d0	; read sprite number from script
-		bmi.s	@end_FF		; if animation is complete, branch
+		cmpi.b	#$FD,d0		; check if its a flag
+		bhs.s	@end_FF		; if the animation is complete and its not a flag, branch
+		
 
 	@next:
 		move.b	d0,obFrame(a0)	; load sprite number
@@ -100,14 +104,12 @@ Sonic_Animate:
 		neg.w	d2		; modulus speed
 
 	@nomodspeed:
-		lea	(SonAni_Run).l,a1 ; use	running	animation
+		lea	(AniSonic01).l,a1 ; use	running	animation
 		cmpi.w	#$600,d2	; is Sonic at running speed?
 		bcc.s	@running	; if yes, branch
 
-		lea	(SonAni_Walk).l,a1 ; use walking animation
-		move.b	d0,d1
-		lsr.b	#1,d1
-		add.b	d1,d0
+		lea	(AniSonic00).l,a1 ; use walking animation
+		add.b	d0,d0
 
 	@running:
 		add.b	d0,d0
@@ -133,10 +135,10 @@ Sonic_Animate:
 		neg.w	d2
 
 	@nomodspeed2:
-		lea	(SonAni_Roll2).l,a1 ; use fast animation
+		lea	(AniSonic03).l,a1 ; use fast animation
 		cmpi.w	#$600,d2	; is Sonic moving fast?
 		bcc.s	@rollfast	; if yes, branch
-		lea	(SonAni_Roll).l,a1 ; use slower	animation
+		lea	(AniSonic02).l,a1 ; use slower	animation
 
 	@rollfast:
 		neg.w	d2
@@ -167,7 +169,7 @@ Sonic_Animate:
 	@belowmax3:
 		lsr.w	#6,d2
 		move.b	d2,obTimeFrame(a0) ; modify frame duration
-		lea	(SonAni_Push).l,a1
+		lea	(AniSonic04).l,a1
 		move.b	obStatus(a0),d1
 		andi.b	#1,d1
 		andi.b	#$FC,obRender(a0)

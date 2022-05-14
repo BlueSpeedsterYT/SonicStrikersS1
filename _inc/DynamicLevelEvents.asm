@@ -6,6 +6,14 @@
 
 
 DynamicLevelEvents:
+
+	;Mercury Exit DLE In Special Stage And Title
+		cmpi.b	#id_Title,(v_gamemode).w	;exit if on the Title
+		beq.s	DLE_NoChg
+		cmpi.b	#id_Special,(v_gamemode).w	;exit if in a Special Stage
+		beq.s	DLE_NoChg
+	;end Exit DLE In Special Stage And Title
+	
 		moveq	#0,d0
 		move.b	(v_zone).w,d0
 		add.w	d0,d0
@@ -76,9 +84,11 @@ DLE_GHZx:	dc.w DLE_GHZ1-DLE_GHZx
 
 DLE_GHZ1:
 		move.w	#$300,(v_limitbtm1).w ; set lower y-boundary
+		move.w	#$300,(v_limitbtm2).w ; set lower y-boundary	;Mercury High Speed Camera Fix
 		cmpi.w	#$1780,(v_screenposx).w ; has the camera reached $1780 on x-axis?
 		bcs.s	locret_6E08	; if not, branch
 		move.w	#$400,(v_limitbtm1).w ; set lower y-boundary
+		move.w	#$400,(v_limitbtm2).w ; set lower y-boundary	;Mercury High Speed Camera Fix
 
 locret_6E08:
 		rts	
@@ -127,6 +137,12 @@ DLE_GHZ3main:
 		move.w	#$4C0,(v_limitbtm2).w
 
 loc_6E8E:
+
+	;Mercury High Speed Camera Fix
+		cmpi.w	#$380,(v_screenposy).w
+		bcc.s	locret_6E96
+	;end High Speed Camera Fix
+	
 		cmpi.w	#$1700,(v_screenposx).w
 		bcc.s	loc_6E98
 

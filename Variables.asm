@@ -2,6 +2,12 @@
 
 ;ReadySonic ported stuff I guess...
 
+;v_ssangleprev:	= $FFFFF784	; previous Special Stage angle (1 byte)
+v_spindashsfx1:	= $FFFFFEB0
+v_spindashsfx2:	= v_spindashsfx1+1
+v_spindashsfx3:	= v_spindashsfx1+2
+v_cameralag:	= $FFFFFEB3	; camera lag after launching Spin Dash (1 byte)
+v_scrolldelay:	= $FFFFFEBE	; scroll delay timer
 v_centstep:	= $FFFFFEBF	; value used to increment centiseconds
 
 ;Regular Sonic 1 flags
@@ -353,3 +359,7 @@ v_creditsnum:	equ $FFFFFFF4	; credits index number (2 bytes)
 v_megadrive:	equ $FFFFFFF8	; Megadrive machine type
 f_debugmode:	equ $FFFFFFFA	; debug mode flag (sometimes 2 bytes)
 v_init:		equ $FFFFFFFC	; 'init' text string (4 bytes)
+
+; cool new stuff
+v_camera_pan:    equ $FFFFF5C0    ; Extended Camera - how far the camera/view is panned to the left or right of Sonic (2 bytes)
+Saved_music:	equ $FFFFFE2A	; saved music

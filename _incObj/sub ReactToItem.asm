@@ -14,8 +14,14 @@ ReactToItem:
 		move.b	obHeight(a0),d5	; load Sonic's height
 		subq.b	#3,d5
 		sub.w	d5,d3
-		cmpi.b	#fr_Duck,obFrame(a0) ; is Sonic ducking?
+		
+		cmpi.b	#id_SpinDash,obAnim(a0)
+		beq.s	@short
+		
+		cmpi.b	#id_Duck,obAnim(a0) ; is Sonic ducking?
 		bne.s	@notducking	; if not, branch
+		
+	@short:
 		addi.w	#$C,d3
 		moveq	#$A,d5
 
@@ -158,6 +164,7 @@ React_Monitor:
 		cmpi.b	#id_Roll,obAnim(a0) ; is Sonic rolling/jumping?
 		bne.s	@donothing
 		neg.w	obVelY(a0)	; reverse Sonic's y-motion
+		move.b	#1,$3C(a0)
 		addq.b	#2,obRoutine(a1) ; advance the monitor's routine counter
 
 	@donothing:
@@ -167,6 +174,10 @@ React_Monitor:
 React_Enemy:
 		tst.b	(v_invinc).w	; is Sonic invincible?
 		bne.s	@donthurtsonic	; if yes, branch
+		
+		cmpi.b	#id_SpinDash,obAnim(a0)	; is Sonic Spin Dashing?
+		beq.w	@breakenemy	; if yes, branch
+		
 		cmpi.b	#id_Roll,obAnim(a0) ; is Sonic rolling/jumping?
 		bne.w	React_ChkHurt	; if not, branch
 
@@ -214,6 +225,7 @@ React_Enemy:
 		cmp.w	obY(a1),d0
 		bcc.s	@bounceup
 		neg.w	obVelY(a0)
+		move.b	#1,$3C(a0)
 		rts	
 ; ===========================================================================
 
@@ -230,6 +242,24 @@ React_Enemy:
 ; ===========================================================================
 
 React_Caterkiller:
+		move.b	#1,d0
+		move.w	obInertia(a0),d1
+		bmi.s	@skip
+		move.b	#0,d0
+		
+	@skip:
+		move.b	obStatus(a1),d1
+		andi.b	#1,d1
+		cmp.b	d0,d1			;are Sonic and the Caterkiller facing the same way?
+		bne.s	@hurt			;if not, move on
+		btst	#1,obStatus(a0)	;is Sonic in the air?
+		bne.s	@hurt			;if so, move on
+		btst	#2,obStatus(a0)	;is Sonic spinning?	
+		beq.s	@hurt			;if not, move on
+		moveq	#-1,d0			;else, he's rolling on the ground, and shouldn't be hurt
+		rts				
+	
+	@hurt:
 		bset	#7,obStatus(a1)
 
 React_ChkHurt:
@@ -289,14 +319,17 @@ HurtSonic:
 		neg.w	obVelX(a0)	; if Sonic is right of the object, reverse
 
 	@isleft:
+		bclr	#0,$39(a0)	; clear Spin Dash flag
 		move.w	#0,obInertia(a0)
 		move.b	#id_Hurt,obAnim(a0)
 		move.w	#120,$30(a0)	; set temp invincible time to 2 seconds
 		move.w	#sfx_Death,d0	; load normal damage sound
 		cmpi.b	#id_Spikes,(a2)	; was damage caused by spikes?
-		bne.s	@sound		; if not, branch
+		beq.s	@setspikesound	; if so, branch
 		cmpi.b	#id_Harpoon,(a2) ; was damage caused by LZ harpoon?
 		bne.s	@sound		; if not, branch
+
+	@setspikesound:
 		move.w	#sfx_HitSpikes,d0 ; load spikes damage sound
 
 	@sound:
@@ -326,7 +359,7 @@ KillSonic:
 		move.w	#-$700,obVelY(a0)
 		move.w	#0,obVelX(a0)
 		move.w	#0,obInertia(a0)
-		move.w	obY(a0),$38(a0)
+		;move.w	obY(a0),$38(a0)
 		move.b	#id_Death,obAnim(a0)
 		bset	#7,obGfx(a0)
 		move.w	#sfx_Death,d0	; play normal death sound

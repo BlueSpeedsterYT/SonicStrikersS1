@@ -62,11 +62,7 @@ Obj85_LoadBoss:
 		move.b	(a3)+,obRoutine(a1)
 		move.b	(a3)+,obAnim(a1)
 		move.b	(a3)+,obPriority(a1)
-		if Revision=0
-		move.b	(a3)+,obWidth(a1)
-		else
-			move.b	(a3)+,obActWid(a1)
-		endc
+		move.b	(a3)+,obActWid(a1)
 		move.b	(a3)+,obHeight(a1)
 		move.b	#4,obRender(a1)
 		bset	#7,obRender(a0)
@@ -192,8 +188,10 @@ loc_19F6A:
 		move.w	d0,(v_player+obVelX).w
 		tst.b	$35(a0)
 		bne.s	loc_19F88
+		tst.b	obColProp(a0)	;has the boss been defeated?
+		beq.s	loc_19F9C	;if so, don't let it be hit again.
 		subq.b	#1,obColProp(a0)
-		move.b	#$64,$35(a0)
+		move.b	#$20,$35(a0)
 		move.w	#sfx_HitBoss,d0
 		jsr	(PlaySound_Special).l	; play boss damage sound
 
@@ -222,11 +220,8 @@ loc_19FA6:
 ; ===========================================================================
 
 loc_19FBC:
-		if Revision=0
-		else
-			moveq	#100,d0
-			bsr.w	AddPoints
-		endc
+		moveq	#100,d0
+		bsr.w	AddPoints
 		move.b	#6,$34(a0)
 		move.w	#$25C0,obX(a0)
 		move.w	#$53C,obY(a0)
@@ -269,11 +264,7 @@ loc_1A020:
 ; ===========================================================================
 
 loc_1A02A:
-		if Revision=0
-		move.b	#$30,obWidth(a0)
-		else
-			move.b	#$30,obActWid(a0)
-		endc
+		move.b	#$30,obActWid(a0)
 		bset	#0,obStatus(a0)
 		jsr	(SpeedToPos).l
 		move.b	#6,obFrame(a0)
@@ -282,11 +273,7 @@ loc_1A02A:
 		bcs.s	loc_1A070
 		move.w	#$59C,obY(a0)
 		addq.b	#2,$34(a0)
-		if Revision=0
-		move.b	#$20,obWidth(a0)
-		else
-			move.b	#$20,obActWid(a0)
-		endc
+		move.b	#$20,obActWid(a0)
 		move.w	#$100,obVelX(a0)
 		move.w	#-$100,obVelY(a0)
 		addq.b	#2,(v_dle_routine).w
